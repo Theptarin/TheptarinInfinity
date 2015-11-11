@@ -1,20 +1,13 @@
 <?php
 
 require_once 'HL7.php';
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
 /**
- * Description of CobasInterface
- * การเชื่อมข้อมูล CobasIT1000 เพื่อใช้ข้อมูลผู้ป่วยจาก HIMS
- * 1. อ่านไฟล์ HL7 ที่อยู่ในโฟลเดอร์
- * 2. วิเคราะห์ไฟล์แยก HN. มาใช้งาน
- * 3. นำ HN. ไปค้นข้อมูล
- * 4. สร้างไฟล์ ADT Message ไปไว้ที่โฟลเดอร์
- * @author orr
+ * การอ่านไฟล์ข้อมูลผลแลปผู้ป่วยจาก LIS
+ * 1. อ่านไฟล์ HL7 ผลแลปอยู่ในโฟลเดอร์
+ * 2. วิเคราะห์ไฟล์แยกส่วนข้อมูลเพื่อนำเข้าข้อมูล
+ * 3. ส่งข้อมูลเข้าฐานข้อมูล
+ * @author suchart bunhachirat
  */
 class TheptarinInfinity {
 
@@ -23,7 +16,7 @@ class TheptarinInfinity {
     public function __construct($path_foder) {
         $list_files = glob($path_foder);
         foreach ($list_files as $filename) {
-            //echo "$filename size " . filesize($filename) . "\n";
+            echo "$filename size " . filesize($filename) . "\n";
             printf("$filename size " . filesize($filename) . "  " . date('Ymd H:i:s') ."\n");
             //echo date("Ymd h:i:s");
             if (fopen($filename, "r")) {
@@ -32,9 +25,10 @@ class TheptarinInfinity {
                 $message = $hl7->get_message();
                 if ($hl7->valid) {
                     $hn = $message["PID"][3];
-                    $this->get_patient($hn);
+                    //$this->get_patient($hn);
+                    printf("hn = " . $hn . "\n");
                     fclose($myfile);
-                    $this->set_message();
+                    //$this->set_message();
                     unlink($filename);
                 }  else {
                     echo "Unable to read file!";
@@ -79,4 +73,4 @@ class TheptarinInfinity {
 
 }
 
-$my = new TheptarinInfinity("./HIS/RES/*.hl7");
+$my = new TheptarinInfinity("./LIS/RES/*.hl7");
