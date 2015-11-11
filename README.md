@@ -1,1 +1,1 @@
-# Theptarin-Infigity
+# Theptarin-Infinity
