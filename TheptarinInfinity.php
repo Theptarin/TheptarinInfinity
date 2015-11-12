@@ -12,25 +12,23 @@ require_once 'HL7.php';
 class TheptarinInfinity {
 
     protected $patient = array();
-    
+
     public function __construct($path_foder) {
         $list_files = glob($path_foder);
         foreach ($list_files as $filename) {
-            echo "$filename size " . filesize($filename) . "\n";
-            printf("$filename size " . filesize($filename) . "  " . date('Ymd H:i:s') ."\n");
-            //echo date("Ymd h:i:s");
+            printf("$filename size " . filesize($filename) . "  " . date('Ymd H:i:s') . "\n");
             if (fopen($filename, "r")) {
                 $myfile = fopen($filename, "r") or die("Unable to open file!");
                 $hl7 = new HL7(fread($myfile, filesize($filename)));
                 $message = $hl7->get_message();
                 if ($hl7->valid) {
-                    $hn = $message["PID"][3];
-                    //$this->get_patient($hn);
-                    printf("hn = " . $hn . "\n");
+                    if ($message["PID"][3] == "754258") {
+                        print_r($message);
+                    }
+                    //$hn = $message["PID"][3];
+                    //printf("hn = " . $hn . "\n");
                     fclose($myfile);
-                    //$this->set_message();
-                    unlink($filename);
-                }  else {
+                } else {
                     echo "Unable to read file!";
                 }
             } else {
@@ -38,8 +36,7 @@ class TheptarinInfinity {
             }
         }
     }
-    
-    
+
     protected function get_patient($hn) {
         $dsn = 'mysql:host=10.1.99.6;dbname=ttr_mse';
         $username = 'orr-projects';
@@ -56,8 +53,8 @@ class TheptarinInfinity {
         print_r($this->patient);
         return;
     }
-    
-    protected function set_message(){
+
+    protected function set_message() {
         $patient = $this->patient;
         $fname = iconv("UTF-8", "tis-620", $patient[fname]);
         $lname = iconv("UTF-8", "tis-620", $patient[lname]);
