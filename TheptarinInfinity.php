@@ -5,9 +5,11 @@ require_once 'HL7.php';
 /**
  * การอ่านไฟล์ข้อมูลผลแลปผู้ป่วยจาก LIS
  * 1. อ่านไฟล์ HL7 ผลแลปอยู่ในโฟลเดอร์
- * 2. วิเคราะห์ไฟล์แยกส่วนข้อมูลเพื่อนำเข้าข้อมูล
+ * 2. วิเคราะห์ไฟล์แยกส่วนข้อมูลเพื่อสามารถจัดเตรียมนำเข้าฐานข้อมูลได้
  * 3. ส่งข้อมูลเข้าฐานข้อมูล
- * @author suchart bunhachirat
+ * @author สุชาติ บุญหชัยรัตน์ suchart bunhachirat <suchartbu@gmail.com>
+ * @author ปนัสดา คชพันธ์ <panusdapun@gmail.com>
+ * @link https://drive.google.com/file/d/0B9r7oU4ZCTVJcnhteF9YSUF3Q0k/view?usp=sharing รายละเอียด HL7
  */
 class TheptarinInfinity {
 
