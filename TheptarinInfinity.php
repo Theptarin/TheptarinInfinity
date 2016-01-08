@@ -25,6 +25,18 @@ class TheptarinInfinity {
                 $message = $hl7->get_message();
                 if ($hl7->valid) {
                     if ($message["PID"][3] == "754258") {
+                        echo "message_date : ".$message["MSH"][6]." ";
+                        echo "patient_id : ".$message["PID"][3]." ";
+                        echo "order_number : ".$message["ORC"][2]." ";
+                        echo "transaction_date : ".$message["ORC"][9]." ";
+                        echo "order_comment : ".$message["NTE"][3]." ";
+                        //echo "test_id :".$message["OBX"][3]; มันเป็น array
+                        //echo "test_name :".$message["OBX"][3]; มันเป็น array
+                        echo "result : ".$message["OBX"][5]." ";
+                        echo "unit : ".$message["OBX"][6]." ";
+                        echo "reference_range : ".$message["OBX"][7]." ";
+                        //echo "validation_date : ".$message["OBX"][15]." "; มันเป็น array
+                        //echo "user_id :".$message["OBX"][16]." "; มันเป็น array
                         print_r($message);
                     }
                     //$hn = $message["PID"][3];
