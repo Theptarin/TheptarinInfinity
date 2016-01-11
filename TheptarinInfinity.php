@@ -30,6 +30,8 @@ class TheptarinInfinity {
                         echo "order_number : ".$message["ORC"][2]." ";
                         echo "transaction_date : ".$message["ORC"][9]." ";
                         echo "order_comment : ".$message["NTE"][3]." ";
+                        echo "test_id :".$message["OBX"][3][0]." ";
+                        echo "test_name :".$message["OBX"][3][1]." ";
                         //echo "test_id :".$message["OBX"][3]; มันเป็น array
                         //echo "test_name :".$message["OBX"][3]; มันเป็น array
                         echo "result : ".$message["OBX"][5]." ";
