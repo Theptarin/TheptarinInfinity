@@ -12,8 +12,6 @@ require_once 'hl7_2_db.php';
 
 class TheptarinInfinity {
 
-    protected $patient = array();
-
     public function __construct($path_foder) {
         $list_files = glob($path_foder);
         foreach ($list_files as $filename) {

@@ -37,7 +37,6 @@ require_once './orr_lib/hl7.php';
 class hl7_2_db {
 
     private $hl7;
-    private $order_file = array();
     private $conn = null;
 
     public function __construct($path_filename) {
@@ -46,27 +45,15 @@ class hl7_2_db {
         //$path_filename = "./ext/lis/res/151010206004213.hl7"; //Lab เยอะ
         try {
             $this->hl7 = new HL7($path_filename);
-            //print_r($this->hl7->get_message());
+            print_r($this->hl7->get_message());
             $this->insert_order();
             //$this->test_order();
-            print_r($this->hl7->segment_count);
+            //print_r($this->hl7->segment_count);
         } catch (Exception $ex) {
             echo 'Caught exception: ', $ex->getMessage(), "\n";
         }
     }
-
-    public function test_order() {
-        $message = $this->hl7->get_message();
-        $this->order_file['message_date'] = $message[0]->fields[5];
-        $this->order_file['patient_id'] = $message[1]->fields[2];
-        //$this->record['order_number'] = $message[4]->fields[1];
-        $this->order_file['transection_date'] = $message[3]->fields[8];
-        $this->order_file['order_comment'] = $message[5]->fields[8];
-
-        print_r($this->order_file);
-        print_r($this->hl7->get_message());
-    }
-
+    
     /**
      * 
      */
@@ -85,12 +72,12 @@ class hl7_2_db {
             exit();
         }
         $message = $this->hl7->get_message();
-        $sql = "INSERT INTO lis_order (message_date, patient_id)
-    VALUES (:message_date, :patient_id)";
+        $sql = "INSERT INTO lis_order (message_date, patient_id, patient_name, gender, birth_date, age, order_number, lab_number, order_time, orderer_name, order_status, ward_name, doctor_name, creator_name, reference_number, acceptor_name, accept_time)
+    VALUES (:message_date, :patient_id, :patient_name, :gender, :birth_date, '999', '???', :lab_number, '', '???', '???', '???', '???', '???', '???', '???', :accept_time)";
         try {
             $stmt = $this->conn->prepare($sql);
-            $stmt->execute(array(":message_date" => $message[0]->fields[5], ":patient_id" => $message[1]->fields[2]));
-            echo 'New record id : ' . $this->conn->lastInsertId();
+            $stmt->execute(array(":message_date" => $message[0]->fields[5], ":patient_id" => $message[1]->fields[2], ":patient_name" => $message[1]->fields[4], ":gender" => $message[1]->fields[7], ":birth_date" => $message[1]->fields[6], ":lab_number" => $message[4]->fields[1], ":accept_time" => $message[3]->fields[8]));
+            //echo 'New record id : ' . $this->conn->lastInsertId();
             $this->get_result($this->conn->lastInsertId());
         } catch (Exception $ex) {
             echo "Could not insert order : " . $ex->getMessage();
@@ -110,12 +97,12 @@ class hl7_2_db {
     }
 
     protected function insert_result($order_id , $value) {
-        print_r($value);
-        $sql = "INSERT INTO lis_result (order_id, test_name)
-    VALUES (:order_id, :test_name)";
+        //print_r($value);
+        $sql = "INSERT INTO lis_result (lis_order_id, section, test, result, result_comment, unit, normal_range)
+    VALUES (:lis_order_id, '???', :test, :result, '###', :unit, :normal_range )";
         try {
             $stmt = $this->conn->prepare($sql);
-            $stmt->execute(array(":order_id" => $order_id, ":test_name" => $value->fields[2]));
+            $stmt->execute(array(":lis_order_id" => $order_id, ":test" => $value->fields[2], ":result" => $value->fields[4],":unit" => $value->fields[5],":normal_range" => $value->fields[6] ));
             echo 'New result id : ' . $this->conn->lastInsertId();
         } catch (Exception $ex) {
             echo "Could not insert result : " . $ex->getMessage();
@@ -123,5 +110,3 @@ class hl7_2_db {
     }
 
 }
-
-$my = new hl7_2_db();
