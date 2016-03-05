@@ -24,9 +24,17 @@
  * THE SOFTWARE.
  */
 
-require_once 'hl7_segment.php';
-
 //namespace orr;
+
+/**
+ * โครงสร้าง HL7
+ */
+
+class hl7_segment {
+    public $name ="";
+    public $index = 0;
+    public $fields = array();
+}
 
 /**
  * Description of hl7
@@ -57,7 +65,6 @@ class hl7 {
      * นับรายการแยกแต่ละ segment
      */
     public $segment_count = array();
-
 
     /**
      * ตรวจหา 'MSH' ส่วนแรกของสตริง HL7 Message
@@ -94,13 +101,18 @@ class hl7 {
             $i = 0;
             foreach ($this->seg as $value) {
                 $seg = explode("|", $value, 2);
-                $segment = new hl7_segment();
-                $segment->name = $seg[0];
-                $segment->index = $i;
-                $segment->fields = explode("|", $seg[1]);
-                $this->set_segemet_count($segment->name);
-                $this->message[] = $segment;
-                $i ++;
+                /**
+                 * @todo เช็คจำนวนอะเรย์ต้องเท่ากับ 2 เพื่อป้องกันปัญหามีค่าเว่างหลงมา
+                 */
+                if (count($seg) == 2) {
+                    $segment = new hl7_segment();
+                    $segment->name = $seg[0];
+                    $segment->index = $i;
+                    $segment->fields = explode("|", $seg[1]);
+                    $this->set_segemet_count($segment->name);
+                    $this->message[] = $segment;
+                    $i ++;
+                }
             }
         } else {
             throw new Exception('Invalid HL7 Message must start with MSH.');
@@ -114,14 +126,14 @@ class hl7 {
     public function get_message() {
         return $this->message;
     }
-    
+
     /**
      * นับรายการแต่ละ segment
      */
-    private function set_segemet_count($key){
-        if(array_key_exists($key, $this->segment_count)){
+    private function set_segemet_count($key) {
+        if (array_key_exists($key, $this->segment_count)) {
             $this->segment_count[$key] ++;
-        }  else {
+        } else {
             $this->segment_count[$key] = 1;
         }
     }
