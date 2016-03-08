@@ -30,7 +30,7 @@ require_once './orr_lib/hl7.php';
  * 
  * 1. อ่านไฟล์โดยใช้คลาส hl7
  * 2. เชื่อมฐานข้อมูล
- * 3. เพิ่มรายการในฐานข้อมูล
+ * 3. เพิ่มรายการใหม่ใน theptarin_utf8 lis_order lis_result lis_result_remark
  *
  * @author suchart bunhachirat
  */
@@ -39,25 +39,26 @@ class hl7_2_db {
     private $hl7;
     private $conn = null;
 
+    /**
+     * รับค่าพาธไฟล์ HL7
+     * @param string $path_filename
+     */
     public function __construct($path_filename) {
 
         //$path_filename = "./ext/lis/res/151008206007219.hl7"; //ชื่อภาษาไทย ต้องแปลงเป็น UTF8
         //$path_filename = "./ext/lis/res/151010206004213.hl7"; //Lab เยอะ
         try {
             $this->hl7 = new HL7($path_filename);
-            print_r($this->hl7->get_message());
             $this->insert_order();
-            //$this->test_order();
-            //print_r($this->hl7->segment_count);
         } catch (Exception $ex) {
             echo 'Caught exception: ', $ex->getMessage(), "\n";
         }
     }
-    
+
     /**
-     * 
+     * เชื่อมฐานข้อมูลที่ต้องการใช้งาน
      */
-    protected function insert_order() {
+    private function get_conn() {
         $dsn = 'mysql:host=10.1.99.6;dbname=theptarin_utf8';
         $username = 'orr-projects';
         $password = 'orr-projects';
@@ -68,44 +69,86 @@ class hl7_2_db {
         try {
             $this->conn = new PDO($dsn, $username, $password, $options);
         } catch (Exception $ex) {
-            echo "Could not connect to database : " . $ex->getMessage();
+            echo "Could not connect to database : " . $ex->getMessage(), "\n";
             exit();
         }
+    }
+
+    /**
+     * เพิ่มรายการใหม่ใน lis_order
+     */
+    protected function insert_order() {
+        $this->get_conn();
         $message = $this->hl7->get_message();
         $sql = "INSERT INTO lis_order (message_date, patient_id, patient_name, gender, birth_date, lab_number, reference_number, accept_time)
     VALUES (:message_date, :patient_id, :patient_name, :gender, :birth_date, :lab_number, :reference_number, :accept_time)";
         try {
             $stmt = $this->conn->prepare($sql);
             $stmt->execute(array(":message_date" => $message[0]->fields[5], ":patient_id" => $message[1]->fields[2], ":patient_name" => $message[1]->fields[4], ":gender" => $message[1]->fields[7], ":birth_date" => $message[1]->fields[6], ":lab_number" => $message[4]->fields[1], ":reference_number" => $message[3]->fields[1], ":accept_time" => $message[3]->fields[8]));
-            //echo 'New record id : ' . $this->conn->lastInsertId();
-            $this->get_result($this->conn->lastInsertId());
+            $this->read_result($this->conn->lastInsertId());
         } catch (Exception $ex) {
             echo "Could not insert order : " . $ex->getMessage();
         }
     }
 
-    protected function get_result($order_id){
+    /**
+     * เลือกอ่าน segment ชื่อ OBX คือผลแต่ละรายการ และ NTE สำหรับหมายเหตุ
+     * @param int $order_id
+     */
+    protected function read_result($order_id) {
         $message = $this->hl7->get_message();
         /**
          * คำสั่งคัดเฉพาะ secment ที่ต้องการ
          */
         foreach ($message as $value) {
-            if($value->name == 'OBX'){
-                $this->insert_result($order_id,$value);
+            /**
+             * @todo ถ้า$value->name มีขึ้นบรรทัดใหม่ต่อท้ายจะทำให้เช็คไม่เจอ ควรป้องกันปัญหานี้ต่อไป
+             */
+            if ($value->name == 'OBX') {
+                $result_id = NULL;
+                $result_id = $this->insert_result($order_id, $value);
+            } elseif ($value->name == 'NTE' and $result_id > 0) {
+                $this->insert_result_remark($result_id, $value);
             }
         }
     }
 
-    protected function insert_result($order_id , $value) {
-        //print_r($value);
+    /**
+     * เพิ่มรายการใหม่ใน lis_result
+     * @param int $order_id
+     * @param array $value
+     * @return int
+     */
+    protected function insert_result($order_id, $value) {
+        /**
+         * @todo รอปรับโครงสร้างตารางให้ถูกต้อง แล้วมาแก้ไข SQL
+         */
         $sql = "INSERT INTO lis_result (lis_order_id, section, test, result, result_comment, unit, normal_range)
     VALUES (:lis_order_id, '???', :test, :result, '###', :unit, :normal_range )";
         try {
             $stmt = $this->conn->prepare($sql);
-            $stmt->execute(array(":lis_order_id" => $order_id, ":test" => $value->fields[2], ":result" => $value->fields[4],":unit" => $value->fields[5],":normal_range" => $value->fields[6] ));
-            echo 'New result id : ' . $this->conn->lastInsertId();
+            $stmt->execute(array(":lis_order_id" => $order_id, ":test" => $value->fields[2], ":result" => $value->fields[4], ":unit" => $value->fields[5], ":normal_range" => $value->fields[6]));
+            return $this->conn->lastInsertId();
         } catch (Exception $ex) {
             echo "Could not insert result : " . $ex->getMessage();
+        }
+    }
+
+    /**
+     * เพิ่มรายการใหม่ใน lis_result_remark
+     * @param type $result_id
+     * @param type $value
+     * @return type
+     */
+    protected function insert_result_remark($result_id, $value) {
+        $sql = "INSERT INTO lis_result_remark (lis_result_id, remark)
+    VALUES (:lis_result_id, :remark)";
+        try {
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute(array(":lis_result_id" => $result_id, ":remark" => $value->fields[2]));
+            return $this->conn->lastInsertId();
+        } catch (Exception $ex) {
+            echo "Could not insert remark result : " . $ex->getMessage();
         }
     }
 
