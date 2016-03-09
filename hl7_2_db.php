@@ -80,6 +80,7 @@ class hl7_2_db {
     protected function insert_order() {
         $this->get_conn();
         $message = $this->hl7->get_message();
+        //print_r($message);
         $sql = "INSERT INTO lis_order (message_date, patient_id, patient_name, gender, birth_date, lab_number, reference_number, accept_time)
     VALUES (:message_date, :patient_id, :patient_name, :gender, :birth_date, :lab_number, :reference_number, :accept_time)";
         try {
@@ -123,11 +124,14 @@ class hl7_2_db {
         /**
          * @todo รอปรับโครงสร้างตารางให้ถูกต้อง แล้วมาแก้ไข SQL
          */
-        $sql = "INSERT INTO lis_result (lis_order_id, section, test, result, result_comment, unit, normal_range)
-    VALUES (:lis_order_id, '???', :test, :result, '###', :unit, :normal_range )";
+        $sql = "INSERT INTO lis_result (lis_order_id, code_lis, test, code_lab, code_rst , result, result_comment, unit, normal_range, user_id, technical_time, medical_time)
+    VALUES (:lis_order_id, :code_lis, :test, :code_lab, :code_rst, :result, '###', :unit, :normal_range, :user_id, :technical_time, :medical_time)";
         try {
+            $test = explode("^",  $value->fields[2], 4);
+            $validation_time = explode("^",  $value->fields[14], 2);
+            //print_r($validation_time);
             $stmt = $this->conn->prepare($sql);
-            $stmt->execute(array(":lis_order_id" => $order_id, ":test" => $value->fields[2], ":result" => $value->fields[4], ":unit" => $value->fields[5], ":normal_range" => $value->fields[6]));
+            $stmt->execute(array(":lis_order_id" => $order_id, ":code_lis" => $test[0], ":test" => $test[1], ":code_lab" => $test[2], ":code_rst" => $test[3], ":result" => $value->fields[4], ":unit" => $value->fields[5], ":normal_range" => $value->fields[6], ":technical_time" => $validation_time[0], ":medical_time" => $validation_time[1], ":user_id" => $value->fields[15]));
             return $this->conn->lastInsertId();
         } catch (Exception $ex) {
             echo "Could not insert result : " . $ex->getMessage();
