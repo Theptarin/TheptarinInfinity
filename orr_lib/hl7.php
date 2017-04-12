@@ -95,7 +95,7 @@ class hl7 {
      * อ่านไฟล์ HL7
      */
     protected function set_content($string) {
-        $this->seg = array_filter(explode("\r", $string));
+        $this->seg = array_filter(explode("\r\n", $string));
 
         if (substr($this->seg[0], 0, 3) == 'MSH') {
             $i = 0;
