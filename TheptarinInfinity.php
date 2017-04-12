@@ -26,6 +26,7 @@ class TheptarinInfinity {
                 $this->move_done_file($filename);
             } else {
                 $this->move_error_file($filename);
+                echo $hl7_2_db->error_message . "\n";
             }
         }
     }

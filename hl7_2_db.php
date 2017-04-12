@@ -95,8 +95,8 @@ class hl7_2_db {
                 //print $message[4]->fields[1];
             } else {
                 $error = $stmt->errorInfo();
-                echo 'Query failed with message: ' . $error[2];
-                $this->error_message .= $error[2];
+                //echo 'Query failed with message: ' . $error[2];
+                $this->error_message .= " insert_order : " . $error[2];
             }
         }
     }
@@ -134,9 +134,7 @@ class hl7_2_db {
      * @return int
      */
     protected function insert_result($lis_number, $message) {
-        /**
-         * @todo รอปรับโครงสร้างตารางให้ถูกต้อง แล้วมาแก้ไข SQL
-         */
+       
         $test = explode("^", $message->fields[2], 4);
         $validation_time = explode("^", $message->fields[14], 2);
 
@@ -150,8 +148,8 @@ class hl7_2_db {
                 return $test[0];
             } else {
                 $error = $stmt->errorInfo();
-                echo 'Query failed with message: ' . $error[2];
-                $this->error_message .= $error[2];
+                //echo 'Query failed with message: ' . $error[2];
+                $this->error_message .=  " insert_result : " . $error[2];
             }
         }
     }
@@ -164,7 +162,10 @@ class hl7_2_db {
      * @return int
      */
     protected function insert_result_remark($lis_number, $lis_code, $message) {
-        $sql = "UPDATE `lis_result` SET `remark`=concat(`remark`,:remark) WHERE `lis_number` = :lis_number AND `lis_code` = :lis_code";
+         /**
+         * @todo Remark หลายบรรทัดยังไม่ได้
+         */
+        $sql = "UPDATE `lis_result` SET `remark`= concat(`remark`,:remark) WHERE `lis_number` = :lis_number AND `lis_code` = :lis_code";
         $stmt = $this->conn->prepare($sql);
 
         if ($stmt) {
@@ -174,8 +175,8 @@ class hl7_2_db {
                 return 0;
             } else {
                 $error = $stmt->errorInfo();
-                echo 'Query failed with message: ' . $error[2];
-                $this->error_message .= $error[2];
+                //echo 'Query failed with message: ' . $error[2];
+                $this->error_message .=  "  insert_result_remark : " . $error[2];
             }
         }
     }
