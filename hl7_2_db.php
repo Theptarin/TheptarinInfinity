@@ -38,6 +38,7 @@ class hl7_2_db {
 
     private $hl7;
     private $conn = null;
+    public $error_message = null;
 
     /**
      * รับค่าพาธไฟล์ HL7
@@ -47,6 +48,7 @@ class hl7_2_db {
 
         //$path_filename = "./ext/lis/res/151008206007219.hl7"; //ชื่อภาษาไทย ต้องแปลงเป็น UTF8
         //$path_filename = "./ext/lis/res/151010206004213.hl7"; //Lab เยอะ
+        $this->path_filename = $path_filename;
         try {
             $this->hl7 = new HL7($path_filename);
             $this->insert_order();
@@ -59,7 +61,7 @@ class hl7_2_db {
      * เชื่อมฐานข้อมูลที่ต้องการใช้งาน
      */
     private function get_conn() {
-        $dsn = 'mysql:host=10.1.99.6;dbname=theptarin_utf8';
+        $dsn = 'mysql:host=10.1.99.6;dbname=ttr_hims';
         $username = 'orr-projects';
         $password = 'orr-projects';
         $options = array(
@@ -81,22 +83,29 @@ class hl7_2_db {
         $this->get_conn();
         $message = $this->hl7->get_message();
         //print_r($message);
-        $sql = "INSERT INTO lis_order (message_date, patient_id, patient_name, gender, birth_date, lab_number, reference_number, accept_time)
-    VALUES (:message_date, :patient_id, :patient_name, :gender, :birth_date, :lab_number, :reference_number, :accept_time)";
-        try {
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute(array(":message_date" => $message[0]->fields[5], ":patient_id" => $message[1]->fields[2], ":patient_name" => $message[1]->fields[4], ":gender" => $message[1]->fields[7], ":birth_date" => $message[1]->fields[6], ":lab_number" => $message[4]->fields[1], ":reference_number" => $message[3]->fields[1], ":accept_time" => $message[3]->fields[8]));
-            $this->read_result($this->conn->lastInsertId());
-        } catch (Exception $ex) {
-            echo "Could not insert order : " . $ex->getMessage();
+
+        $sql = "INSERT INTO lis_order (message_date, patient_id, patient_name, gender, birth_date, lis_number, reference_number, accept_time) VALUES (:message_date, :patient_id, :patient_name, :gender, :birth_date, :lis_number, :reference_number, :accept_time)";
+        $stmt = $this->conn->prepare($sql);
+
+        if ($stmt) {
+            $result = $stmt->execute(array(":message_date" => $message[0]->fields[5], ":patient_id" => $message[1]->fields[2], ":patient_name" => $message[1]->fields[4], ":gender" => $message[1]->fields[7], ":birth_date" => $message[1]->fields[6], ":lis_number" => $message[4]->fields[1], ":reference_number" => $message[3]->fields[1], ":accept_time" => $message[3]->fields[8]));
+
+            if ($result) {
+                $this->read_result($message[4]->fields[1]);
+                //print $message[4]->fields[1];
+            } else {
+                $error = $stmt->errorInfo();
+                echo 'Query failed with message: ' . $error[2];
+                $this->error_message .= $error[2];
+            }
         }
     }
 
     /**
      * เลือกอ่าน segment ชื่อ OBX คือผลแต่ละรายการ และ NTE สำหรับหมายเหตุ
-     * @param int $order_id
+     * @param int $lis_number
      */
-    protected function read_result($order_id) {
+    protected function read_result($lis_number) {
         $message = $this->hl7->get_message();
         /**
          * คำสั่งคัดเฉพาะ secment ที่ต้องการ
@@ -105,54 +114,69 @@ class hl7_2_db {
             /**
              * @todo ถ้า$value->name มีขึ้นบรรทัดใหม่ต่อท้ายจะทำให้เช็คไม่เจอ ควรป้องกันปัญหานี้ต่อไป
              */
-            if ($value->name == 'OBX') {
-                $result_id = NULL;
-                $result_id = $this->insert_result($order_id, $value);
-            } elseif ($value->name == 'NTE' and $result_id > 0) {
-                $this->insert_result_remark($result_id, $value);
+            switch ($value->name) {
+                case "OBX":
+                    $lis_code = $this->insert_result($lis_number, $value);
+                    break;
+                case "NTE":
+                    $lis_code = $this->insert_result_remark($lis_number, $lis_code, $value);
+                    break;
+                default :
+                    $lis_code = 0;
             }
         }
     }
 
     /**
      * เพิ่มรายการใหม่ใน lis_result
-     * @param int $order_id
-     * @param array $value
+     * @param int $lis_number
+     * @param array $message
      * @return int
      */
-    protected function insert_result($order_id, $value) {
+    protected function insert_result($lis_number, $message) {
         /**
          * @todo รอปรับโครงสร้างตารางให้ถูกต้อง แล้วมาแก้ไข SQL
          */
-        $sql = "INSERT INTO lis_result (lis_order_id, code_lis, test, code_lab, code_rst , result, result_comment, unit, normal_range, user_id, technical_time, medical_time)
-    VALUES (:lis_order_id, :code_lis, :test, :code_lab, :code_rst, :result, '###', :unit, :normal_range, :user_id, :technical_time, :medical_time)";
-        try {
-            $test = explode("^",  $value->fields[2], 4);
-            $validation_time = explode("^",  $value->fields[14], 2);
-            //print_r($validation_time);
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute(array(":lis_order_id" => $order_id, ":code_lis" => $test[0], ":test" => $test[1], ":code_lab" => $test[2], ":code_rst" => $test[3], ":result" => $value->fields[4], ":unit" => $value->fields[5], ":normal_range" => $value->fields[6], ":technical_time" => $validation_time[0], ":medical_time" => $validation_time[1], ":user_id" => $value->fields[15]));
-            return $this->conn->lastInsertId();
-        } catch (Exception $ex) {
-            echo "Could not insert result : " . $ex->getMessage();
+        $test = explode("^", $message->fields[2], 4);
+        $validation_time = explode("^", $message->fields[14], 2);
+
+        $sql = "INSERT INTO lis_result (lis_number, lis_code, test, lab_code, result_code , result,  unit, normal_range, user_id, technical_time, medical_time) VALUES (:lis_number, :lis_code, :test, :lab_code, :result_code, :result, :unit, :normal_range, :user_id, :technical_time, :medical_time)";
+        $stmt = $this->conn->prepare($sql);
+
+        if ($stmt) {
+            $result = $stmt->execute(array(":lis_number" => $lis_number, ":lis_code" => $test[0], ":test" => $test[1], ":lab_code" => $test[2], ":result_code" => $test[3], ":result" => $message->fields[4], ":unit" => $message->fields[5], ":normal_range" => $message->fields[6], ":technical_time" => $validation_time[0], ":medical_time" => $validation_time[1], ":user_id" => $message->fields[15]));
+
+            if ($result) {
+                return $test[0];
+            } else {
+                $error = $stmt->errorInfo();
+                echo 'Query failed with message: ' . $error[2];
+                $this->error_message .= $error[2];
+            }
         }
     }
 
     /**
      * เพิ่มรายการใหม่ใน lis_result_remark
-     * @param type $result_id
-     * @param type $value
-     * @return type
+     * @param int $lis_number
+     * @param int $lis_code
+     * @param array $message
+     * @return int
      */
-    protected function insert_result_remark($result_id, $value) {
-        $sql = "INSERT INTO lis_result_remark (lis_result_id, remark)
-    VALUES (:lis_result_id, :remark)";
-        try {
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute(array(":lis_result_id" => $result_id, ":remark" => $value->fields[2]));
-            return $this->conn->lastInsertId();
-        } catch (Exception $ex) {
-            echo "Could not insert remark result : " . $ex->getMessage();
+    protected function insert_result_remark($lis_number, $lis_code, $message) {
+        $sql = "UPDATE `lis_result` SET `remark`=concat(`remark`,:remark) WHERE `lis_number` = :lis_number AND `lis_code` = :lis_code";
+        $stmt = $this->conn->prepare($sql);
+
+        if ($stmt) {
+            $result = $stmt->execute(array(":lis_number" => $lis_number, ":lis_code" => $lis_code, ":remark" => $message->fields[2]));
+            if ($result) {
+                //print $message->fields[2];
+                return 0;
+            } else {
+                $error = $stmt->errorInfo();
+                echo 'Query failed with message: ' . $error[2];
+                $this->error_message .= $error[2];
+            }
         }
     }
 
