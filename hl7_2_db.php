@@ -116,13 +116,17 @@ class hl7_2_db {
              */
             switch ($value->name) {
                 case "OBX":
+                    if (!is_null($remark)) {
+                        $remark = $this->insert_result_remark($lis_number, $lis_code, $remark);
+                    }
                     $lis_code = $this->insert_result($lis_number, $value);
                     break;
                 case "NTE":
-                    $lis_code = $this->insert_result_remark($lis_number, $lis_code, $value);
+                    $remark .= $value->fields[2] . "\n";
                     break;
                 default :
                     $lis_code = 0;
+                    $remark = NULL;
             }
         }
     }
@@ -134,7 +138,7 @@ class hl7_2_db {
      * @return int
      */
     protected function insert_result($lis_number, $message) {
-       
+
         $test = explode("^", $message->fields[2], 4);
         $validation_time = explode("^", $message->fields[14], 2);
 
@@ -149,7 +153,7 @@ class hl7_2_db {
             } else {
                 $error = $stmt->errorInfo();
                 //echo 'Query failed with message: ' . $error[2];
-                $this->error_message .=  " insert_result : " . $error[2];
+                $this->error_message .= " insert_result : " . $error[2];
             }
         }
     }
@@ -158,25 +162,23 @@ class hl7_2_db {
      * เพิ่มรายการใหม่ใน lis_result_remark
      * @param int $lis_number
      * @param int $lis_code
-     * @param array $message
+     * @param string $remark
      * @return int
      */
-    protected function insert_result_remark($lis_number, $lis_code, $message) {
-         /**
-         * @todo Remark หลายบรรทัดยังไม่ได้
-         */
-        $sql = "UPDATE `lis_result` SET `remark`= concat(`remark`,:remark) WHERE `lis_number` = :lis_number AND `lis_code` = :lis_code";
+    protected function insert_result_remark($lis_number, $lis_code, $remark) {
+
+        $sql = "UPDATE `lis_result` SET `remark`= :remark WHERE `lis_number` = :lis_number AND `lis_code` = :lis_code";
         $stmt = $this->conn->prepare($sql);
 
         if ($stmt) {
-            $result = $stmt->execute(array(":lis_number" => $lis_number, ":lis_code" => $lis_code, ":remark" => $message->fields[2]));
+            $result = $stmt->execute(array(":lis_number" => $lis_number, ":lis_code" => $lis_code, ":remark" => $remark));
             if ($result) {
-                //print $message->fields[2];
-                return 0;
+                //print $remark;
+                return null;
             } else {
                 $error = $stmt->errorInfo();
                 //echo 'Query failed with message: ' . $error[2];
-                $this->error_message .=  "  insert_result_remark : " . $error[2];
+                $this->error_message .= "  insert_result_remark : " . $error[2];
             }
         }
     }
