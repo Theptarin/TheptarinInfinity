@@ -23,6 +23,9 @@ class TheptarinInfinity {
             printf("$filename size " . filesize($filename) . "  " . date('Ymd H:i:s') . "\n");
             $hl7_2_db = new hl7_2_db($filename);
             if ($hl7_2_db->error_message == null) {
+                /**
+                 * @todo ส่งไฟล์ไปที่ HIMS V5
+                 */
                 $this->move_done_file($filename);
             } else {
                 $this->move_error_file($filename);
@@ -37,7 +40,8 @@ class TheptarinInfinity {
      */
     private function move_done_file($filename) {
         try {
-            rename($filename, "/var/www/mount/hims-doc/lis/done/" . basename($filename));
+            //rename($filename, "/var/www/mount/hims-doc/lis/done/" . basename($filename));
+            rename($filename, "/var/www/mount/hims-doc/lis/Result/" . basename($filename));
         } catch (Exception $ex) {
             echo 'Caught exception: ', $ex->getMessage(), "\n";
         }
@@ -49,7 +53,8 @@ class TheptarinInfinity {
      */
     private function move_error_file($filename) {
         try {
-            rename($filename, "/var/www/mount/hims-doc/lis/error/" . basename($filename));
+            //exitrename($filename, "/var/www/mount/hims-doc/lis/error/" . basename($filename));
+            rename($filename, "/var/www/mount/hims-doc/lis/Result/" . basename($filename));
         } catch (Exception $ex) {
             echo 'Caught exception: ', $ex->getMessage(), "\n";
         }
