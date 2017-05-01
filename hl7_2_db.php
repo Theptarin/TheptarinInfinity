@@ -36,6 +36,7 @@ require_once './orr_lib/hl7.php';
  */
 class hl7_2_db {
 
+    private $path_filename;
     private $hl7;
     private $conn = null;
     public $error_message = null;
