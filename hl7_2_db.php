@@ -84,8 +84,8 @@ class hl7_2_db {
         $this->get_conn();
         $message = $this->hl7->get_message();
         //print_r($message);
-
-        $sql = "INSERT INTO lis_order (message_date, patient_id, patient_name, gender, birth_date, lis_number, reference_number, accept_time,request_div) VALUES (:message_date, :patient_id, :patient_name, :gender, :birth_date, :lis_number, :reference_number, :accept_time,:request_div)";
+        $sql = "INSERT INTO lis_order (message_date, patient_id, patient_name, gender, birth_date, lis_number, reference_number, accept_time,request_div) VALUES (:message_date, :patient_id, :patient_name, :gender, :birth_date, :lis_number, :reference_number, :accept_time,:request_div) ON DUPLICATE KEY UPDATE message_date = :message_date , accept_time = :accept_time ";
+        //$sql = "INSERT INTO lis_order (message_date, patient_id, patient_name, gender, birth_date, lis_number, reference_number, accept_time,request_div) VALUES (:message_date, :patient_id, :patient_name, :gender, :birth_date, :lis_number, :reference_number, :accept_time,:request_div)";
         $stmt = $this->conn->prepare($sql);
 
         if ($stmt) {
