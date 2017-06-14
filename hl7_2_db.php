@@ -142,14 +142,15 @@ class hl7_2_db {
 
         $test = explode("^", $message->fields[2], 4);
         $validation_time = explode("^", $message->fields[14], 2);
-
-        $sql = "INSERT INTO lis_result (lis_number, lis_code, test, lab_code, result_code , result,  unit, normal_range, user_id, technical_time, medical_time) VALUES (:lis_number, :lis_code, :test, :lab_code, :result_code, :result, :unit, :normal_range, :user_id, :technical_time, :medical_time)";
+        $result_date = date('Y-m-d', strtotime($validation_time[1]));
+        
+        $sql = "INSERT INTO lis_result (lis_number, lis_code, test, lab_code, result_code , result,  unit, normal_range, user_id, technical_time, medical_time, result_date) VALUES (:lis_number, :lis_code, :test, :lab_code, :result_code, :result, :unit, :normal_range, :user_id, :technical_time, :medical_time, :result_date)";
         $stmt = $this->conn->prepare($sql);
         /**
          * @todo  lab_type จากไฟล์ HL7 ไม่มี แต่แก้ไขให้มีในตารางตามเดิม
          * */
         if ($stmt) {
-            $result = $stmt->execute(array(":lis_number" => $lis_number, ":lis_code" => $test[0], ":test" => $test[1], ":lab_code" => $test[2], ":result_code" => $test[3], ":result" => $message->fields[4], ":unit" => $message->fields[5], ":normal_range" => $message->fields[6], ":technical_time" => $validation_time[0], ":medical_time" => $validation_time[1], ":user_id" => $message->fields[15]));
+            $result = $stmt->execute(array(":lis_number" => $lis_number, ":lis_code" => $test[0], ":test" => $test[1], ":lab_code" => $test[2], ":result_code" => $test[3], ":result" => $message->fields[4], ":unit" => $message->fields[5], ":normal_range" => $message->fields[6], ":technical_time" => $validation_time[0], ":medical_time" => $validation_time[1], ":user_id" => $message->fields[15], ":result_date"=>$result_date));
 
             if ($result) {
                 return $test[0];
