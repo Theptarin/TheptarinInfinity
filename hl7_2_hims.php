@@ -17,8 +17,8 @@ class hl7_2_hims {
     private $path_filename;
     private $hl7;
     private $conn = NULL;
-    private $lab_checkin_match = NULL;
     public $error_message = NULL;
+    public $record_count = 0;
 
     /**
      * รับค่าพาธไฟล์ HL7
@@ -29,10 +29,6 @@ class hl7_2_hims {
         try {
             $this->hl7 = new HL7($path_filename);
             $this->check_match();
-            if ($this->lab_checkin_match['v5_id'] <> '') {
-                $this->set_message_v5();
-                $this->move_done_file($path_filename);
-            }
         } catch (Exception $ex) {
             echo 'Caught exception: ', $ex->getMessage(), "\n";
         }
@@ -58,7 +54,7 @@ class hl7_2_hims {
     }
 
     /**
-     * ตรวจสอบ  v4_id จาก lab_checkin_match จาก ttr_hims
+     * ตรวจสอบ  v4_id จาก lab_checkin_match จาก ttr_hims 
      */
     private function check_match() {
 
@@ -70,11 +66,13 @@ class hl7_2_hims {
         if ($stmt) {
             $result = $stmt->execute(array(":reference_number" => $message[3]->fields[1]));
             if ($result) {
-                $this->lab_checkin_match = $stmt->fetch();
-                //print $message[4]->fields[1];
+                while ($record = $stmt->fetch()) {
+                    $this->set_message_v5($record);
+                    $this->record_count ++;
+                }
+                echo " record_count = " . $this->record_count . " | " . __FILE__ . " | " . __LINE__ . "\n";
             } else {
                 $error = $stmt->errorInfo();
-                //echo 'Query failed with message: ' . $error[2];
                 $this->error_message .= " v4_id : " . $error[2];
             }
         }
@@ -82,15 +80,19 @@ class hl7_2_hims {
 
     /**
      * สร้างไฟล์ HL7 ไปที่ /var/www/mount/hims-doc/lis/Result/
+     * @param array $record
      */
-    private function set_message_v5() {
+    private function set_message_v5($record) {
         $message = $this->hl7->get_message();
         $file_contents = file_get_contents($this->path_filename);
         $search = "ORC|1|" . $message[3]->fields[1];
-        $replace = "ORC|1|" . $this->lab_checkin_match['v5_id'];
+        $replace = "ORC|1|" . $record['v5_id'];
         //print_r(str_replace($search, $replace, $file_contents));
-        $filename = "/var/www/mount/hims-doc/lis/Result/" . $this->lab_checkin_match['v5_id'] . "_" . $message[4]->fields[1] . "_" . date("YmdHi") . "_TRH.hl7";
-        //$filename = "/var/www/mount/hims-doc/lis/test/" . $this->lab_checkin_match['v5_id'] . "_" . $message[4]->fields[1] . "_" . date("YmdHi") . "_TRH.hl7";
+        /**
+         * เพิ่ม request_lab_type ในชื่อไฟล์เพื่อสะดวกในการตรวจสอบ
+         */
+        $filename = "/var/www/mount/hims-doc/lis/Result/" . $record['v5_id'] . "_" . $message[0]->fields[8] . "_" . $record['request_lab_type'] . "_TRH.hl7";
+        echo " filename = " . $filename . " | " . __FILE__ . " | " . __LINE__ . "\n";
         try {
             $handle = fopen($filename, "w") or die("Unable to open file!");
             fwrite($handle, str_replace($search, $replace, $file_contents));
@@ -98,18 +100,6 @@ class hl7_2_hims {
         } catch (Exception $ex) {
             echo 'Caught exception: ', $ex->getMessage(), "\n";
             $this->error_message .= " set_message_v5 : " . $ex->getMessage();
-        }
-    }
-    
-     /**
-     * ย้ายไฟล์ที่ประมาลผลสำเร็จ
-     * @param string $filename
-     */
-    private function move_done_file($filename) {
-        try {
-            rename($filename, "/var/www/mount/hims-doc/lis/done/" . basename($filename));
-        } catch (Exception $ex) {
-            echo 'Caught exception: ', $ex->getMessage(), "\n";
         }
     }
 

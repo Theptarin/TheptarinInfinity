@@ -23,6 +23,40 @@ class TheptarinHIMS {
         foreach ($list_files as $filename) {
             printf("$filename size " . filesize($filename) . "  " . date('Ymd H:i:s') . "\n");
             $hl7_2_hims = new hl7_2_hims($filename);
+            /**
+             * ย้ายไฟล์ที่ประมวลผลตามสถานะ
+             */
+            if ($hl7_2_hims->error_message === NULL) {
+                if ($hl7_2_hims->record_count > 0) {
+                    $this->move_done_file($filename);
+                }
+            } else {
+                $this->move_error_file($filename);
+            }
+        }
+    }
+
+    /**
+     * ย้ายไฟล์ที่ประมาลผลสำเร็จ
+     * @param string $filename
+     */
+    private function move_done_file($filename) {
+        try {
+            rename($filename, "/var/www/mount/hims-doc/lis/done/" . basename($filename));
+        } catch (Exception $ex) {
+            echo 'Caught exception: ', $ex->getMessage(), "\n";
+        }
+    }
+
+    /**
+     * ย้ายไฟล์ที่ประมาลผลไม่สำเร็จ
+     * @param string $filename
+     */
+    private function move_error_file($filename) {
+        try {
+            rename($filename, "/var/www/mount/hims-doc/lis/error/" . basename($filename));
+        } catch (Exception $ex) {
+            echo 'Caught exception: ', $ex->getMessage(), "\n";
         }
     }
 
