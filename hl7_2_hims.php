@@ -6,9 +6,9 @@ require_once './orr_lib/hl7.php';
  * Description of hl7_2_hims
  * 
  *  อ่านไฟล์ใน ResultForHims เพื่อเก็บรายละเอียดไปใช้ค้นข้อมูลที่ HIMS
- * ใช้ result_document_id จากข้อมูล HL7 เพื่อค้น v5_id
+ * ใช้ result_document_id จากข้อมูล HL7 เพื่อค้น file_no
  *  สร้างไฟล์ชื่อตามแบบ HIMS
- * ใส่ v5_id แทน result_document_id เดิม
+ * ใส่ file_no แทน result_document_id เดิม
  * ย้ายไฟล์ไปที่ Result ให้ HIMS
  * @author สุชาติ บุญหชัยรัตน์ suchart bunhachirat <suchartbu@gmail.com>
  */
@@ -66,10 +66,10 @@ class hl7_2_hims {
         if ($stmt) {
             $result = $stmt->execute(array(":reference_number" => $message[3]->fields[1]));
             if ($result) {
-                while ($record = $stmt->fetch()) {
-                    $this->set_message_v5($record);
-                    $this->record_count ++;
-                }
+                $record = $stmt->fetch();
+                $this->set_message_v5($record);
+                $this->record_count ++;
+
                 echo " record_count = " . $this->record_count . " | " . __FILE__ . " | " . __LINE__ . "\n";
             } else {
                 $error = $stmt->errorInfo();
@@ -86,12 +86,9 @@ class hl7_2_hims {
         $message = $this->hl7->get_message();
         $file_contents = file_get_contents($this->path_filename);
         $search = "ORC|1|" . $message[3]->fields[1];
-        $replace = "ORC|1|" . $record['v5_id'];
+        $replace = "ORC|1|" . $record['file_no'];
         //print_r(str_replace($search, $replace, $file_contents));
-        /**
-         * เพิ่ม request_lab_type ในชื่อไฟล์เพื่อสะดวกในการตรวจสอบ
-         */
-        $filename = "/var/www/mount/hims-doc/lis/Result/" . $record['v5_id'] . "_" . $message[0]->fields[8] . "_" . $record['request_lab_type'] . "_TRH.hl7";
+        $filename = "/var/www/mount/hims-doc/lis/Result/" . $record['file_no'] . "_" . $message[0]->fields[8] . "_TRH.hl7";
         echo " filename = " . $filename . " | " . __FILE__ . " | " . __LINE__ . "\n";
         try {
             $handle = fopen($filename, "w") or die("Unable to open file!");
