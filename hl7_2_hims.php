@@ -17,8 +17,7 @@ class hl7_2_hims {
     private $path_filename;
     private $hl7;
     private $conn = NULL;
-    public $error_message = NULL;
-    public $record_count = 0;
+    public  $message = NULL;
 
     /**
      * รับค่าพาธไฟล์ HL7
@@ -67,13 +66,7 @@ class hl7_2_hims {
             $result = $stmt->execute(array(":reference_number" => $message[3]->fields[1]));
             if ($result) {
                 $record = $stmt->fetch();
-                $this->set_message_v5($record);
-                $this->record_count ++;
-
-                echo " record_count = " . $this->record_count . " | " . __FILE__ . " | " . __LINE__ . "\n";
-            } else {
-                $error = $stmt->errorInfo();
-                $this->error_message .= " v4_id : " . $error[2];
+                if($record['file_no']!="")$this->set_message_v5($record);
             }
         }
     }
@@ -94,9 +87,10 @@ class hl7_2_hims {
             $handle = fopen($filename, "w") or die("Unable to open file!");
             fwrite($handle, str_replace($search, $replace, $file_contents));
             fclose($handle);
+            $this->message = "DONE";
         } catch (Exception $ex) {
             echo 'Caught exception: ', $ex->getMessage(), "\n";
-            $this->error_message .= " set_message_v5 : " . $ex->getMessage();
+           $this->message = "ERROR";
         }
     }
 

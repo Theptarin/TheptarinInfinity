@@ -26,12 +26,14 @@ class TheptarinHIMS {
             /**
              * ย้ายไฟล์ที่ประมวลผลตามสถานะ
              */
-            if ($hl7_2_hims->error_message === NULL) {
-                if ($hl7_2_hims->record_count > 0) {
+            switch ($hl7_2_hims->message) {
+                case "DONE" :
                     $this->move_done_file($filename);
-                }
-            } else {
-                $this->move_error_file($filename);
+                    break;
+                case "ERROR":
+                    $this->move_error_file($path_foder);
+                    break;
+                default :
             }
         }
     }
